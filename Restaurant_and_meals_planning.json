@@ -1,0 +1,712 @@
+{
+  "name": "Restaurant and meals planning",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "bea0845c-c444-4043-ae0a-04fac48be508",
+      "name": "On Click",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1Msv3qk-vKE-VLvPWMbQd2l2SjMOsADoI",
+          "mode": "list",
+          "cachedResultName": "tunisian_dishes.csv",
+          "cachedResultUrl": "https://drive.google.com/file/d/1Msv3qk-vKE-VLvPWMbQd2l2SjMOsADoI/view?usp=drivesdk"
+        },
+        "options": {}
+      },
+      "id": "5d107d37-24f9-48e7-a566-fdfdbdb52fd7",
+      "name": "Download file1",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        240,
+        928
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "LyIhNX00lmnGPjXs",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "85f743e8-1dee-4674-ae65-77cdab237f4d",
+      "name": "Extract from File",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        496,
+        944
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "restaurant_knowledge",
+          "cachedResultName": "restaurant_knowledge"
+        },
+        "embeddingBatchSize": 5,
+        "options": {
+          "queryName": "match_restaurant_knowledge"
+        }
+      },
+      "id": "a98aabc3-dcbf-44f7-be14-ac71fa8ef0aa",
+      "name": "Insert Documents",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        768,
+        976
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "fPBiCoK977fESOpa",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "711882ed-c3fd-4fa7-9532-924978df451d",
+      "name": "Gemini Embeddings (Docs Upload)",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        752,
+        1168
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "43IuSevQVrEuIziu",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "14c61d33-1962-4b6e-991b-28b9dd8f8785",
+      "name": "Load Document File",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        944,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Collect restaurant information from the Kharjet Tunisia website:\n\nhttps://www.kharjet.tn/restaurant-tunisie/restaurant/\n\nFind a limited selection of relevant Tunisian restaurants from different locations.\n\nRetrieve the restaurant pages and extract the required restaurant and menu information according to your instructions.\n\nDo not crawl the entire website.",
+        "options": {
+          "systemMessage": "You are a Web Data Extraction Agent specialized in Tunisian restaurants.\n\nYour only role is to collect reliable restaurant information from the provided website using the available Firecrawl tools through MCP.\n\nYou are part of a RAG knowledge-base ingestion workflow.\n\nYour output will be sent to a text processing and embedding pipeline and then stored in a Supabase Vector Store.\n\nYou are NOT a chatbot.\nYou do NOT answer restaurant questions.\nYou do NOT make recommendations.\nYou do NOT use your own knowledge to fill missing information.\n\n## TARGET\n\nThe target website is:\n\nhttps://www.kharjet.tn/restaurant-tunisie/restaurant/\n\nUse the available Firecrawl/MCP tools to discover and retrieve restaurant pages from this website.\n\n## OBJECTIVE\n\nBuild a useful and diverse knowledge base of Tunisian restaurants.\n\nCollect restaurant information from different Tunisian cities and locations when available.\n\nDo not attempt to crawl the entire website in one operation.\n\nUse a limited number of restaurant pages per execution and avoid unnecessary Firecrawl requests.\n\n## INFORMATION TO EXTRACT\n\nFor each restaurant, extract ONLY the following information when available:\n\n- Restaurant name\n- City / location\n- Cuisine / type\n- Rating\n- Price range\n- Specialties\n- Menu items and prices\n- Short description\nDo not focus on unnecessary information such as:\n- advertisements\n- navigation\n- comments\n- unrelated articles\n- cookie notices\n- website structure\n- duplicate content\n\n## MENU\n\nMenu information is particularly important.\n\nWhen a menu is available, extract:\n\n- Menu category\n- Dish name\n- Price\n\nPreserve the exact names and prices found on the website.\n\nDo not invent or estimate prices.\n\n## DATA QUALITY\n\nOnly use information actually found on the target website.\n\nNever invent:\n- restaurant names\n- ratings\n- prices\n- dishes\n- addresses\n- cuisine types\n- specialties\n\nIf a field is not available, omit it or mark it as \"Not available\".\n\nAvoid duplicate restaurants.\n\n## FIRECRAWL TOOL USAGE\n\nUse the minimum number of Firecrawl requests necessary.\n\nUse Map or Search to discover relevant restaurant pages.\n\nUse Scrape when you have identified a specific restaurant page and need its detailed information.\n\nDo not repeatedly scrape the same page.\n\nDo not crawl unrelated sections of the website.\n\n## OUTPUT\n\nReturn the extracted information in a clean structured format.\n\nFor each restaurant use:\n\nRestaurant:\nCity:\nCuisine:\nRating:\nPrice range:\nSpecialties:\nDescription:\nMenu:\n- Category:\n  - Dish — Price\n\nSeparate each restaurant clearly.\n\nThe output must contain factual information retrieved from the website and must be suitable for downstream text splitting, embedding, and storage in Supabase.\n\nRemember:\n\nYour purpose is KNOWLEDGE ACQUISITION, not question answering."
+        }
+      },
+      "id": "63ebd8db-e4d5-4faa-90aa-48ca551b67c9",
+      "name": "Web Research Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        208
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxOutputTokens": 2048,
+          "temperature": 0.4
+        }
+      },
+      "id": "7d57386d-2b1d-4ea9-a0ca-8f48a9cc65a8",
+      "name": "Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        240,
+        432
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "43IuSevQVrEuIziu",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "scrape",
+        "url": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('URL', ``, 'string') }}",
+        "parsers": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Parsers', ``, 'string') }}",
+        "requestOptions": {}
+      },
+      "id": "f352d1c7-50e9-499d-82b1-a5ea2c5a66a3",
+      "name": "/scrape in Firecrawl",
+      "type": "@mendable/n8n-nodes-firecrawl.firecrawlTool",
+      "typeVersion": 1,
+      "position": [
+        368,
+        544
+      ],
+      "credentials": {
+        "firecrawlApi": {
+          "id": "JchwLBhDJociPNpQ",
+          "name": "Firecrawl account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "MapSearch",
+        "operation": "map",
+        "requestOptions": {}
+      },
+      "id": "c39fb849-54b3-4ffb-8cf4-3ad60541c8fd",
+      "name": "/map in Firecrawl",
+      "type": "@mendable/n8n-nodes-firecrawl.firecrawlTool",
+      "typeVersion": 1,
+      "position": [
+        384,
+        416
+      ],
+      "credentials": {
+        "firecrawlApi": {
+          "id": "JchwLBhDJociPNpQ",
+          "name": "Firecrawl account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "restaurant_knowledge",
+          "cachedResultName": "restaurant_knowledge"
+        },
+        "embeddingBatchSize": 50,
+        "options": {
+          "queryName": "match_restaurant_knowledge"
+        }
+      },
+      "id": "32c32697-92ad-4476-b277-b6bc06a83b73",
+      "name": "Insert Web Content",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        176
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "fPBiCoK977fESOpa",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "e33e72cd-9235-4406-938f-b5406ac8d58e",
+      "name": "Gemini Embeddings (Web)",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        576,
+        384
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "43IuSevQVrEuIziu",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.output }}",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "source",
+                "value": "web_research"
+              }
+            ]
+          }
+        }
+      },
+      "id": "f8bd45e9-decd-4cf9-9111-a958a6bc6486",
+      "name": "Load Web Content",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "chunkOverlap": 100,
+        "options": {}
+      },
+      "id": "a1c66edb-f83a-4a82-a512-b01175e30174",
+      "name": "Split Web Content",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        768,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "0e671d9e-930f-42e0-b4d3-2458a062c782",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        2176,
+        352
+      ],
+      "webhookId": "48c6158f-e92f-4d96-8d0e-44c28854313a"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "= You are an AI Restaurant & Meal Planning Assistant. You help users discover restaurants, compare options, plan meals and get personalized recommendations based on budget, number of people, location, cuisine, dietary preferences and date. \n \nYou have these tools — use them ONLY when relevant to the request, never call every tool for every question: \n- search_knowledge_base: search the restaurant RAG knowledge base (menus, prices, cuisines, dietary/vegetarian/vegan options, opening hours, locations, descriptions). Use this for most restaurant questions. \n- get_weather: get current weather for a city. Use ONLY when the request depends on weather (e.g. outdoor/terrace seating). \n- send_email: send recommendations by email. Use ONLY when the user asks to email them. \n- create_calendar_event: add a dining plan to Google Calendar. Use ONLY when the user asks to schedule it.\n\n## DATE & TIMEZONE HANDLING (read carefully before scheduling)\nThe current date and time in UTC is {{ $now.toUTC().toISO() }}. Do not assume this is the user's local time. Before calculating any relative date (tomorrow, next Friday, in 3 days, etc.) or creating a calendar event, first determine the IANA timezone of the city/location involved in the reservation using your knowledge (e.g. Tunis -> Africa/Tunis, Paris -> Europe/Paris, New York -> America/New_York). Convert the UTC time above into that timezone to establish \"today\" for that location, then calculate the relative date from there. If the reservation city is missing or ambiguous, ASK the user for it before creating the event.\n\n## PERSONALIZATION (send the booking to the USER, not to the assistant owner)\nThe calendar event is created on the assistant owner's Google Calendar, but it MUST be sent to the user so it lands on THEIR calendar. Therefore, before calling create_calendar_event you MUST know the user's email address — if you do not already have it from the conversation, ASK the user for their email first. Always pass it as the attendee_email argument. The user will receive an invite and the event will appear on their own calendar.\n\n## CALLING create_calendar_event\n- start and end: always full ISO 8601 datetimes INCLUDING the correct UTC offset for the reservation city timezone (e.g. 2026-08-28T20:00:00+01:00) — never a bare datetime and never a \"Z\" suffix unless the location truly is UTC.\n- attendee_email: the user's email address (required, ask if unknown).\n- title, location, description: fill from the chosen restaurant and reservation details.\n \nGuidelines: \n-always make sure to always ask about the date in order to use the get_weather and give the user the  informations about the weather so you can specify either the place should be  indoor or outdoor\n- Identify constraints: budget, number of people, location, cuisine, dietary needs, date. \n- Combine sources when useful (e.g. check weather THEN search the knowledge base for restaurants with outdoor seating). \n- Respect budget and preferences when filtering recommendations. \n- Clearly distinguish stored knowledge from real-time information (weather / freshly scraped web) when both are used. \n- Maintain conversation context for follow-up questions. \n- Give clear, personalized, well-structured final answers. to what u suggested as adding ",
+          "maxIterations": 10
+        }
+      },
+      "id": "1c17a80b-832d-44d2-8ae5-cb6b99e165a5",
+      "name": "Restaurant & Meal Planning Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2496,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "d0df6767-3373-4d43-81e6-e0a1764692e0",
+      "name": "Gemini Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        2176,
+        576
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "43IuSevQVrEuIziu",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "id": "321d3b64-139b-4b5f-b870-051b1f797127",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        2336,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search the restaurant knowledge base (guides, menus, prices, cuisines, dietary options, opening hours, locations, descriptions) built from documents and scraped restaurant websites. Use for any question answerable from stored restaurant knowledge.",
+        "tableName": {
+          "__rl": true,
+          "value": "restaurant_knowledge",
+          "mode": "list",
+          "cachedResultName": "restaurant_knowledge"
+        },
+        "topK": 6,
+        "options": {
+          "queryName": "match_documents",
+          "metadata": {
+            "metadataValues": []
+          }
+        }
+      },
+      "id": "440b943f-4553-4d3c-9b66-71fd20956a03",
+      "name": "search_knowledge_base",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        2496,
+        608
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "fPBiCoK977fESOpa",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "12893a17-0f58-422f-a252-dacb41d65231",
+      "name": "Gemini Embeddings (Query)",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2528,
+        816
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "43IuSevQVrEuIziu",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "cityName": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('city', 'City to get current weather for (used to decide outdoor dining)') }}"
+      },
+      "id": "fb76823a-f6a1-435f-b524-cdfdc3e057cb",
+      "name": "get_weather",
+      "type": "n8n-nodes-base.openWeatherMapTool",
+      "typeVersion": 1,
+      "position": [
+        2960,
+        656
+      ],
+      "credentials": {
+        "openWeatherMapApi": {
+          "id": "xAH50kuL1huzjIwE",
+          "name": "OpenWeatherMap account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('to', 'Recipient email address') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('subject', 'Email subject line') }}",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('message', 'HTML body of the email with the restaurant recommendations') }}",
+        "options": {}
+      },
+      "id": "8beedbff-661d-4581-a324-f29f3697f85c",
+      "name": "send_email",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        3376,
+        624
+      ],
+      "webhookId": "c73b6b72-529b-4a9c-9e48-8611cc919c6e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "FRcPKKEhxROT7VmR",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "eyajemaii52@gmail.com",
+          "mode": "list",
+          "cachedResultName": "eyajemaii52@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('start', 'Event start as a FULL ISO 8601 datetime that INCLUDES the UTC offset for the reservation city timezone, e.g. 2026-08-28T20:00:00+01:00. Never a bare datetime and never a Z suffix unless the location is truly UTC.', 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('end', 'Event end as a FULL ISO 8601 datetime that INCLUDES the UTC offset for the reservation city timezone, e.g. 2026-08-28T22:00:00+01:00. Never a bare datetime and never a Z suffix unless the location is truly UTC.', 'string') }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('attendee_email', 'Email address of the user making the reservation. They are added as an attendee so the event appears on THEIR own Google Calendar.', 'string') }}"
+          ],
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('description', 'Event description with reservation details') }}",
+          "location": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('location', 'Restaurant location / address') }}",
+          "sendUpdates": "all",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('title', 'Event title, e.g. Dinner at La Trattoria') }}"
+        }
+      },
+      "id": "4a98d303-6537-491a-b2d3-50c16bbd8971",
+      "name": "create_calendar_event",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        3216,
+        656
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "kAaeiQAYOWqK4iWK",
+          "name": "Google Calendar account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "On Click": {
+      "main": [
+        [
+          {
+            "node": "Download file1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Web Research Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file1": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Insert Documents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Embeddings (Docs Upload)": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Insert Documents",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Document File": {
+      "ai_document": [
+        [
+          {
+            "node": "Insert Documents",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Web Research Agent": {
+      "main": [
+        [
+          {
+            "node": "Insert Web Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Web Research Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "/scrape in Firecrawl": {
+      "ai_tool": [
+        [
+          {
+            "node": "Web Research Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "/map in Firecrawl": {
+      "ai_tool": [
+        [
+          {
+            "node": "Web Research Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Embeddings (Web)": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Insert Web Content",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Web Content": {
+      "ai_document": [
+        [
+          {
+            "node": "Insert Web Content",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Web Content": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Load Web Content",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Restaurant & Meal Planning Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Restaurant & Meal Planning Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Restaurant & Meal Planning Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "search_knowledge_base": {
+      "ai_tool": [
+        [
+          {
+            "node": "Restaurant & Meal Planning Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Embeddings (Query)": {
+      "ai_embedding": [
+        [
+          {
+            "node": "search_knowledge_base",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_weather": {
+      "ai_tool": [
+        [
+          {
+            "node": "Restaurant & Meal Planning Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_email": {
+      "ai_tool": [
+        [
+          {
+            "node": "Restaurant & Meal Planning Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_calendar_event": {
+      "ai_tool": [
+        [
+          {
+            "node": "Restaurant & Meal Planning Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 0,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
